@@ -1,0 +1,18 @@
+name: "Autonomous SOC Analyst"
+version: "1.0.0"
+description: "A real-world Network Threat Classification environment for OpenEnv."
+tasks:
+  - id: "task_1_easy"
+    description: "Identify simple Benign traffic vs basic volumetric attacks like DDoS."
+    difficulty: "easy"
+  - id: "task_2_medium"
+    description: "Distinguish between multiple types of scans and probes."
+    difficulty: "medium"
+  - id: "task_3_hard"
+    description: "Identify stealthy web attacks and infiltrations hidden among normal traffic."
+    difficulty: "hard"
+action_space: 
+  - "submit (provide classification)"
+  - "query_logs (fetch more PCAP insights)"
+observation_space: 
+  - "Flow logs and packet statistics"
