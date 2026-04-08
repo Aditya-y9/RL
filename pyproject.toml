@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 ﻿[build-system]
+=======
+[build-system]
+>>>>>>> 2934a8a (fix openenv validation errors to generate success state)
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
@@ -12,3 +16,8 @@ dependencies = [
     "openai",
     "pandas"
 ]
+<<<<<<< HEAD
+=======
+[project.scripts]
+server = "server.app:main"
+>>>>>>> 2934a8a (fix openenv validation errors to generate success state)
