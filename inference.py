@@ -5,8 +5,9 @@ from typing import List, Optional
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
 from pydantic import BaseModel
-from advanced_rl_cicids17.env import AdvancedCICIDSEnv
+from env import AdvancedCICIDSEnv
 from schemas import Action, ActionType
+from data_loader import load_and_preprocess_data
 import pandas as pd
 from openai import AsyncOpenAI, OpenAI
 
@@ -19,18 +20,6 @@ def log_step(step: int, action: str, reward: float, done: bool, error: Optional[
 def log_end(success: bool, steps: int, score: float, rewards: List[float]):
     print(f"[END] success={success} steps={steps} score={score} rewards={rewards}", flush=True)
 
-def get_dummy_df():
-    return pd.DataFrame({
-        'ThreatCategory': ['BENIGN', 'BENIGN', 'BENIGN', 'DDOS', 'PORT_SCAN'],
-        'Destination Port': [80.0, 443.0, 22.0, 80.0, 22.0],
-        'Flow Duration': [100.0, 200.0, 50.0, 1000.0, 50.0],
-        'Total Fwd Packets': [5.0, 10.0, 2.0, 500.0, 1.0],
-        'Total Backward Packets': [5.0, 10.0, 2.0, 500.0, 1.0],
-        'Fwd Packet Length Max': [100.0, 200.0, 50.0, 500.0, 0.0],
-        'Bwd Packet Length Max': [100.0, 200.0, 50.0, 500.0, 0.0],
-        'Flow Bytes/s': [10.0, 20.0, 5.0, 1000.0, 0.0],
-        'Flow Packets/s': [10.0, 20.0, 5.0, 1000.0, 0.0]
-    })
 
     
 
@@ -41,7 +30,7 @@ async def main() -> None:
 
     client = AsyncOpenAI(base_url=api_base_url, api_key=api_key)
     
-    df = get_dummy_df()
+    df = load_and_preprocess_data("dataset/", max_per_class=100)
     env = AdvancedCICIDSEnv(df)
 
     tasks = ['task_1_easy', 'task_2_medium', 'task_3_hard']
