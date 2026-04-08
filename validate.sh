@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
-# validate-submission.sh — OpenEnv Submission Validator
+# validate-submission.sh — openenv.exe Submission Validator
 #
-# Checks that your HF Space is live, Docker image builds, and openenv validate passes.
+# Checks that your HF Space is live, Docker image builds, and openenv.exe validate passes.
 #
 # Prerequisites:
 #   - Docker:       https://docs.docker.com/get-docker/
-#   - openenv-core: pip install openenv-core
+#   - openenv.exe-core: pip install openenv.exe-core
 #   - curl (usually pre-installed)
 #
 # Run:
@@ -97,7 +97,7 @@ stop_at() {
 
 printf "\n"
 printf "${BOLD}========================================${NC}\n"
-printf "${BOLD}  OpenEnv Submission Validator${NC}\n"
+printf "${BOLD}  openenv.exe Submission Validator${NC}\n"
 printf "${BOLD}========================================${NC}\n"
 log "Repo:     $REPO_DIR"
 log "Ping URL: $PING_URL"
@@ -155,22 +155,22 @@ else
   stop_at "Step 2"
 fi
 
-log "${BOLD}Step 3/3: Running openenv validate${NC} ..."
+log "${BOLD}Step 3/3: Running openenv.exe validate${NC} ..."
 
-if ! command -v openenv &>/dev/null; then
-  fail "openenv command not found"
-  hint "Install it: pip install openenv-core"
+if ! command -v openenv.exe &>/dev/null; then
+  fail "openenv.exe command not found"
+  hint "Install it: pip install openenv.exe-core"
   stop_at "Step 3"
 fi
 
 VALIDATE_OK=false
-VALIDATE_OUTPUT=$(cd "$REPO_DIR" && openenv validate 2>&1) && VALIDATE_OK=true
+VALIDATE_OUTPUT=$(cd "$REPO_DIR" && openenv.exe validate 2>&1) && VALIDATE_OK=true
 
 if [ "$VALIDATE_OK" = true ]; then
-  pass "openenv validate passed"
+  pass "openenv.exe validate passed"
   [ -n "$VALIDATE_OUTPUT" ] && log "  $VALIDATE_OUTPUT"
 else
-  fail "openenv validate failed"
+  fail "openenv.exe validate failed"
   printf "%s\n" "$VALIDATE_OUTPUT"
   stop_at "Step 3"
 fi

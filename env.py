@@ -5,15 +5,11 @@ import os
 import pandas as pd
 from typing import Optional, Tuple, Dict, Any
 
-# Ensure schemas module can be imported from parent
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from schemas import EnvironmentState, Observation, Action, ActionType, Reward
 
 class AdvancedCICIDSEnv:
     def __init__(self, df: pd.DataFrame, max_steps: int = 15, seed: int = 42):
-        """
-        OpenEnv-compliant environment for CICIDS-17 Threat Classification.
-        """
         self.df = df
         self.seed = seed
         self._rng = random.Random(seed)
@@ -27,7 +23,6 @@ class AdvancedCICIDSEnv:
         self._current_row = None
 
     def state(self) -> EnvironmentState:
-        """OpenEnv standard state inspection method."""
         return self._state
 
     def reset(self, task_id: Optional[str] = None) -> Observation:
@@ -49,7 +44,7 @@ class AdvancedCICIDSEnv:
         }
         
         self._state = EnvironmentState(
-            task_id="cicids_advanced_classification",
+            task_id=task_id or "cicids_advanced_classification",
             step=0,
             done=False,
             logs=json.dumps([log_json]),
@@ -66,40 +61,37 @@ class AdvancedCICIDSEnv:
             prediction = action.final_answer
             ground_truth = self._current_row["ThreatCategory"]
             
-            is_prediction_attack = (prediction != "BENIGN")
-            is_truth_attack = (ground_truth != "BENIGN")
+            is_pred_attack = prediction != "BENIGN"
+            is_true_attack = ground_truth != "BENIGN"
             
             if prediction == ground_truth:
-                reward_val = 1.0  # Correct precise classification (Max 1.0)
-                details = f"Correct classification: {ground_truth}"
+                reward_val = 1.0
+                details = f"correct: {ground_truth}"
+            elif not is_true_attack and is_pred_attack:
+                reward_val = 0.0
+                details = f"false alarm, was benign"
+            elif ground_truth in ["WEBATTACK", "INFILTRATION"] and not is_pred_attack:
+                reward_val = 0.0
+                details = f"missed critical attack: {ground_truth}"
+            elif is_true_attack and not is_pred_attack:
+                reward_val = 0.0
+                details = f"missed attack: {ground_truth}"
+            elif is_true_attack and is_pred_attack and prediction != ground_truth:
+                reward_val = 0.5
+                details = f"partial hit (pred: {prediction}, true: {ground_truth})"
             else:
-                if not is_truth_attack and is_prediction_attack:
-                    # False Alarm (Predicted Attack, was Benign) - explicitly heavily penalized
-                    reward_val = 0.0
-                    details = f"False alarm. Predicted {prediction}"
-                elif ground_truth in ["WEBATTACK", "INFILTRATION"] and not is_prediction_attack:
-                    reward_val = 0.0  # Penalize missing critical attacks
-                    details = f"Severe missed attack! Actual {ground_truth}"
-                elif is_truth_attack and not is_prediction_attack:
-                    # Missed Attack (Predicted Benign, was Attack)
-                    reward_val = 0.0
-                    details = f"Missed attack. Actual {ground_truth}"
-                elif is_truth_attack and is_prediction_attack and prediction != ground_truth:
-                    # Partial Mitigation (Detected an attack, but got the wrong category)
-                    reward_val = 0.5
-                    details = f"Partial detection. Predicted {prediction}, Actual {ground_truth}"
-                else:
-                    reward_val = 0.0
-                    details = f"Incorrect. Predicted {prediction}, Actual {ground_truth}"
+                reward_val = 0.0
+                details = f"wrong (pred: {prediction}, true: {ground_truth})"
                 
             self._done = True
+            
         elif action.action_type == ActionType.query_logs:
-            # Querying consumes a step and a small time penalty (kept as 0 in output but stored in details)
             reward_val = 0.0
-            details = "Extracted more logs."
+            details = "extracted logs"
+            
         else:
             reward_val = 0.0
-            details = "Action not supported in this threat classification task snippet."
+            details = "invalid action"
             
         if self._step_count >= self.max_steps:
             self._done = True

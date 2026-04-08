@@ -3,32 +3,33 @@ import sys
 import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
-from typing import Dict, Any
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
 from env import AdvancedCICIDSEnv
 from data_loader import load_and_preprocess_data
-from schemas import Action, ActionType, Observation, EnvironmentState
+from schemas import Action
 
 app = FastAPI()
 
-# Global env instance
 df = load_and_preprocess_data("hf", max_per_class=5000)
-env_instance = AdvancedCICIDSEnv(df)
+env = AdvancedCICIDSEnv(df)
 
 @app.get("/")
-def read_root():
-    return {"status": "ok", "message": "Autonomous SOC Analyst OpenEnv is running! API paths: /reset, /step, /state"}
+def health_check():
+    return {
+        "status": "ok", 
+        "msg": "soc analyst openenv running",
+        "endpoints": ["/reset", "/step", "/state"]
+    }
 
 @app.post("/reset")
-def reset_endpoint(task_id: str = None):
-    obs = env_instance.reset(task_id=task_id)
-    return {"observation": obs.dict()}
+def reset_env(task_id: str = None):
+    return {"observation": env.reset(task_id=task_id).dict()}
 
 @app.post("/step")
-def step_endpoint(action: Action):
-    obs, reward, done, info = env_instance.step(action)
+def step_env(action: Action):
+    obs, reward, done, info = env.step(action)
     return {
         "observation": obs.dict(),
         "reward": reward.dict(),
@@ -37,8 +38,8 @@ def step_endpoint(action: Action):
     }
 
 @app.get("/state")
-def state_endpoint():
-    return env_instance.state().dict()
+def get_state():
+    return env.state().dict()
 
 def main():
     uvicorn.run(app, host="0.0.0.0", port=7860)
