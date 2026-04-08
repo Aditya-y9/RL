@@ -14,7 +14,7 @@ from schemas import Action, ActionType, Observation, EnvironmentState
 app = FastAPI()
 
 # Global env instance
-df = load_and_preprocess_data("dataset_sample/", max_per_class=200)
+df = load_and_preprocess_data("hf", max_per_class=5000)
 env_instance = AdvancedCICIDSEnv(df)
 
 @app.get("/")

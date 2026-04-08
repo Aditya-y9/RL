@@ -1,4 +1,4 @@
-﻿[build-system]
+[build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
@@ -10,7 +10,8 @@ dependencies = [
     "openenv-core",
     "pydantic",
     "openai",
-    "pandas"
+    "pandas",
+    "datasets"
 ]
 
 [project.scripts]
