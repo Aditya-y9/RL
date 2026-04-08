@@ -30,7 +30,7 @@ async def main() -> None:
 
     client = AsyncOpenAI(base_url=api_base_url, api_key=api_key)
     
-    df = load_and_preprocess_data("dataset/", max_per_class=100)
+    df = load_and_preprocess_data("dataset_sample/", max_per_class=200)
     env = AdvancedCICIDSEnv(df)
 
     tasks = ['task_1_easy', 'task_2_medium', 'task_3_hard']
