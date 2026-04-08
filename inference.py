@@ -32,6 +32,8 @@ def get_dummy_df():
         'Flow Packets/s': [10.0, 20.0, 5.0, 1000.0, 0.0]
     })
 
+    
+
 async def main() -> None:
     api_base_url = os.getenv('API_BASE_URL', 'https://api.openai.com/v1')
     model_name = os.getenv('MODEL_NAME', 'gpt-4o-mini')
