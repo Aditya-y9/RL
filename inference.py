@@ -1,9 +1,7 @@
 import os
 import sys
 import asyncio
-import logging
 from typing import List, Optional
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
 from env import AdvancedCICIDSEnv
@@ -11,34 +9,45 @@ from schemas import Action, ActionType
 from data_loader import load_and_preprocess_data
 from openai import AsyncOpenAI
 
-logging.basicConfig(level=logging.INFO, format='%(message)s')
-logger = logging.getLogger(__name__)
+def log_start(task: str, env: str, model: str):
+    print(f"[START] task={task} env={env} model={model}", flush=True)
 
-async def run_eval():
-    baseUrl = os.getenv('API_BASE_URL', 'https://api.openai.com/v1')
-    model = os.getenv('MODEL_NAME', 'gpt-4o-mini')
-    api_key = os.getenv('OPENAI_API_KEY', 'dummy')
+def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]):
+    print(f"[STEP] step={step} action={action} reward={reward} done={done} error={error}", flush=True)
 
-    client = AsyncOpenAI(base_url=baseUrl, api_key=api_key)
+def log_end(success: bool, steps: int, score: float, rewards: List[float]):
+    print(f"[END] success={success} steps={steps} score={score} rewards={rewards}", flush=True)
+
+async def main():
+    api_base_url = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
+    model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
+    api_key = os.getenv("HF_TOKEN")
+
+    client = AsyncOpenAI(base_url=api_base_url, api_key=api_key)
     
     df = load_and_preprocess_data("hf", max_per_class=200)
     env = AdvancedCICIDSEnv(df)
 
     tasks = ['cicids_easy', 'cicids_medium', 'cicids_hard']
     
-    for _, task_id in enumerate(tasks):
+    for task_id in tasks:
         rewards = []
+        steps_taken = 0
+        score = 0.0
+        success = False
         
-        logger.info(f"--- starting eval for {task_id} using {model} ---")
+        log_start(task=task_id, env="Autonomous SOC Analyst", model=model_name)
+        
         try:
             obs = env.reset(task_id=task_id)
             
-            for step in range(1, env.max_steps + 1):
+            for step_num in range(1, env.max_steps + 1):
                 if env._done: break
                     
+                error_msg = None
                 try:
                     res = await client.chat.completions.create(
-                        model=model,
+                        model=model_name,
                         messages=[
                             {"role": "system", "content": "You are a SOC analyst determining traffic anomalies. Output EXACTLY one category: BENIGN, DDOS, PORT_SCAN, WEBATTACK, INFILTRATION."},
                             {"role": "user", "content": f"task: {task_id}\nlogs: {obs.logs}\ncategory:"}
@@ -48,22 +57,26 @@ async def run_eval():
                     )
                     pred = (res.choices[0].message.content or "BENIGN").strip().upper()
                 except Exception as exc:
-                    logger.warning(f"failed to fetch from llm: {exc}")
+                    error_msg = str(exc)
                     pred = "BENIGN"
                     
                 obs, reward, done, _ = env.step(Action(action_type=ActionType.submit, final_answer=pred))
                 rewards.append(reward.value)
+                steps_taken = step_num
                 
-                logger.info(f"eval step={step} action={pred} rew={reward.value} done={done}")
+                log_step(step=step_num, action=pred, reward=reward.value, done=done, error=error_msg)
+                
                 if done: break
                     
-            final_score = sum(rewards) / len(rewards) if rewards else 0.0
-            final_score = min(max(final_score, 0.0), 1.0)
-            
-            logger.info(f"finished task={task_id} score={final_score:.2f} \n")
+            if rewards:
+                score = sum(rewards) / len(rewards)
+                score = min(max(score, 0.0), 1.0)
+            success = score >= 0.5
             
         except Exception as e:
-            logger.error(f"fatal env error: {e}")
+            print(f"[DEBUG] fatal env error: {e}", flush=True)
+
+        log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
 
 if __name__ == "__main__":
-    asyncio.run(run_eval())
+    asyncio.run(main())
