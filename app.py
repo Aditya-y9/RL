@@ -17,6 +17,10 @@ app = FastAPI()
 df = load_and_preprocess_data("dataset_sample/", max_per_class=200)
 env_instance = AdvancedCICIDSEnv(df)
 
+@app.get("/")
+def read_root():
+    return {"status": "ok", "message": "Autonomous SOC Analyst OpenEnv is running! API paths: /reset, /step, /state"}
+
 @app.post("/reset")
 def reset_endpoint(task_id: str = None):
     obs = env_instance.reset(task_id=task_id)
