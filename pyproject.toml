@@ -1,0 +1,14 @@
+﻿[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autonomous-soc-analyst"
+version = "1.0.0"
+description = "A real-world Network Threat Classification environment for OpenEnv."
+dependencies = [
+    "openenv-core",
+    "pydantic",
+    "openai",
+    "pandas"
+]
