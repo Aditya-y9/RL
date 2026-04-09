@@ -49,18 +49,24 @@ async def main():
                     res = await client.chat.completions.create(
                         model=model_name,
                         messages=[
-                            {"role": "system", "content": "You are a SOC analyst determining traffic anomalies. Output EXACTLY one category: BENIGN, DDOS, PORT_SCAN, WEBATTACK, INFILTRATION."},
-                            {"role": "user", "content": f"task: {task_id}\nlogs: {obs.logs}\ncategory:"}
+                            {"role": "system", "content": "You are a SOC analyst determining traffic anomalies. First you MUST output 'QUERY' to extract deep packet stats if they are missing. Then, to make a final decision, output 'SUBMIT <CATEGORY>' where CATEGORY is one of: BENIGN, DOS, PORTSCAN, WEBATTACK, INFILTRATION, BRUTEFORCE, BOTNET."},
+                            {"role": "user", "content": f"task: {task_id}\nlogs: {obs.logs}\naction:"}
                         ],
-                        max_tokens=10,
+                        max_tokens=15,
                         temperature=0.0
                     )
-                    pred = (res.choices[0].message.content or "BENIGN").strip().upper()
+                    pred = (res.choices[0].message.content or "SUBMIT BENIGN").strip().upper()
                 except Exception as exc:
                     error_msg = str(exc)
-                    pred = "BENIGN"
+                    pred = "SUBMIT BENIGN"
                     
-                obs, reward, done, _ = env.step(Action(action_type=ActionType.submit, final_answer=pred))
+                if "QUERY" in pred:
+                    action = Action(action_type=ActionType.query_logs)
+                else:
+                    cat = pred.split()[-1] if " " in pred else pred.replace("SUBMIT", "").strip() or "BENIGN"
+                    action = Action(action_type=ActionType.submit, final_answer=cat)
+
+                obs, reward, done, _ = env.step(action)
                 rewards.append(reward.value)
                 steps_taken = step_num
                 

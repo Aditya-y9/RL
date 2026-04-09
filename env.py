@@ -26,17 +26,34 @@ class AdvancedCICIDSEnv:
         return self._state
 
     def reset(self, task_id: Optional[str] = None) -> Observation:
-        row_idx = self._rng.randint(0, len(self.df) - 1)
-        self._current_row = self.df.iloc[row_idx]
+        task_id = task_id or "task_1_easy"
+        
+        if "easy" in task_id.lower():
+            valid_cats = ["BENIGN", "DOS"]
+        elif "medium" in task_id.lower():
+            valid_cats = ["BENIGN", "PORTSCAN", "BRUTEFORCE", "BOTNET"]
+        elif "hard" in task_id.lower():
+            valid_cats = ["BENIGN", "WEBATTACK", "INFILTRATION"]
+        else:
+            valid_cats = self.classes
+            
+        filtered_df = self.df[self.df["ThreatCategory"].isin(valid_cats)]
+        if len(filtered_df) == 0: filtered_df = self.df
+            
+        row_idx = self._rng.randint(0, len(filtered_df) - 1)
+        self._current_row = filtered_df.iloc[row_idx]
         
         self._step_count = 0
         self._done = False
         
-        log_json = {
+        initial_logs = {
             "Destination_Port": float(self._current_row.get("Destination Port", 0)),
             "Flow_Duration": float(self._current_row.get("Flow Duration", 0)),
             "Total_Fwd_Packets": float(self._current_row.get("Total Fwd Packets", 0)),
-            "Total_Bwd_Packets": float(self._current_row.get("Total Backward Packets", 0)),
+            "Total_Bwd_Packets": float(self._current_row.get("Total Backward Packets", 0))
+        }
+        
+        self._hidden_logs = {
             "Fwd_Packet_Length_Max": float(self._current_row.get("Fwd Packet Length Max", 0)),
             "Bwd_Packet_Length_Max": float(self._current_row.get("Bwd Packet Length Max", 0)),
             "Flow_Bytes_s": float(self._current_row.get("Flow Bytes/s", 0)),
@@ -44,10 +61,10 @@ class AdvancedCICIDSEnv:
         }
         
         self._state = EnvironmentState(
-            task_id=task_id or "cicids_advanced_classification",
+            task_id=task_id,
             step=0,
             done=False,
-            logs=json.dumps([log_json]),
+            logs=json.dumps([initial_logs]),
             score=0.0
         )
         return self._make_observation()
@@ -87,7 +104,13 @@ class AdvancedCICIDSEnv:
             
         elif action.action_type == ActionType.query_logs:
             reward_val = 0.01
-            details = "extracted logs"
+            details = "extracted deep packet stats"
+            
+            if hasattr(self, '_hidden_logs') and self._hidden_logs:
+                current_logs = json.loads(self._state.logs)
+                current_logs[0].update(self._hidden_logs)
+                self._state.logs = json.dumps(current_logs)
+                self._hidden_logs = {}
             
         else:
             reward_val = 0.01
