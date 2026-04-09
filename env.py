@@ -65,32 +65,32 @@ class AdvancedCICIDSEnv:
             is_true_attack = ground_truth != "BENIGN"
             
             if prediction == ground_truth:
-                reward_val = 1.0
+                reward_val = 0.99
                 details = f"correct: {ground_truth}"
             elif not is_true_attack and is_pred_attack:
-                reward_val = 0.0
+                reward_val = 0.01
                 details = f"false alarm, was benign"
             elif ground_truth in ["WEBATTACK", "INFILTRATION"] and not is_pred_attack:
-                reward_val = 0.0
+                reward_val = 0.01
                 details = f"missed critical attack: {ground_truth}"
             elif is_true_attack and not is_pred_attack:
-                reward_val = 0.0
+                reward_val = 0.01
                 details = f"missed attack: {ground_truth}"
             elif is_true_attack and is_pred_attack and prediction != ground_truth:
                 reward_val = 0.5
                 details = f"partial hit (pred: {prediction}, true: {ground_truth})"
             else:
-                reward_val = 0.0
+                reward_val = 0.01
                 details = f"wrong (pred: {prediction}, true: {ground_truth})"
                 
             self._done = True
             
         elif action.action_type == ActionType.query_logs:
-            reward_val = 0.0
+            reward_val = 0.01
             details = "extracted logs"
             
         else:
-            reward_val = 0.0
+            reward_val = 0.01
             details = "invalid action"
             
         if self._step_count >= self.max_steps:
@@ -99,6 +99,11 @@ class AdvancedCICIDSEnv:
         self._state.step = self._step_count
         self._state.done = self._done
         self._state.score += reward_val
+        
+        if self._done:
+            self._state.score = min(max(self._state.score, 0.01), 0.99)
+        else:
+            self._state.score = min(max(self._state.score, 0.01), 0.99)
         
         obs = self._make_observation(info=details)
         reward = Reward(value=reward_val, breakdown={"details": details}, step=self._step_count)
